@@ -37,7 +37,7 @@ jobs:
         with:
           registry: ${{ env.ACR }}
           username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWPRD }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and push image
         uses: docker/build-push-action@v4
