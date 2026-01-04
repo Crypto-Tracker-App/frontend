@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CoinService from '../services/coinService';
 import '../assets/styles/Home.css';
 
 const Home = () => {
@@ -10,25 +11,20 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch coins from backend API
-    // For now, using mock data
     const fetchCoins = async () => {
       setLoading(true);
-      // Simulated API call
-      setTimeout(() => {
-        const mockCoins = [
-          { id: 1, symbol: 'BTC', name: 'Bitcoin', price: 42500.50, change24h: 2.5 },
-          { id: 2, symbol: 'ETH', name: 'Ethereum', price: 2250.75, change24h: -1.2 },
-          { id: 3, symbol: 'BNB', name: 'Binance Coin', price: 305.20, change24h: 0.8 },
-          { id: 4, symbol: 'ADA', name: 'Cardano', price: 0.52, change24h: 3.1 },
-          { id: 5, symbol: 'SOL', name: 'Solana', price: 98.45, change24h: -0.5 },
-          { id: 6, symbol: 'XRP', name: 'Ripple', price: 0.61, change24h: 1.9 },
-          { id: 7, symbol: 'DOT', name: 'Polkadot', price: 7.32, change24h: -2.1 },
-          { id: 8, symbol: 'DOGE', name: 'Dogecoin', price: 0.08, change24h: 5.3 },
-        ];
-        setCoins(mockCoins);
+      try {
+        const response = await CoinService.getTopCoins(10, 0);
+        if (response.status === 'success' && response.data) {
+          setCoins(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch coins:', error);
+        // Fallback to empty array on error
+        setCoins([]);
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     };
 
     fetchCoins();
@@ -95,13 +91,13 @@ const Home = () => {
               </thead>
               <tbody>
                 {coins.map((coin, index) => (
-                  <tr key={coin.id}>
+                  <tr key={coin.id || index}>
                     <td>{index + 1}</td>
                     <td className="coin-name">{coin.name}</td>
                     <td className="coin-symbol">{coin.symbol}</td>
-                    <td className="coin-price">${coin.price.toLocaleString()}</td>
-                    <td className={coin.change24h >= 0 ? 'change-positive' : 'change-negative'}>
-                      {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+                    <td className="coin-price">${typeof coin.current_price === 'number' ? coin.current_price.toLocaleString() : coin.price?.toLocaleString() || 'N/A'}</td>
+                    <td className={coin.market_cap_change_percentage_24h >= 0 ? 'change-positive' : 'change-negative'}>
+                      {coin.market_cap_change_percentage_24h >= 0 ? '+' : ''}{coin.market_cap_change_percentage_24h?.toFixed(2) || coin.change24h?.toFixed(2) || 'N/A'}%
                     </td>
                   </tr>
                 ))}

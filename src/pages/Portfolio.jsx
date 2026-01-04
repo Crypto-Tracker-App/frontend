@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CoinService from '../services/coinService';
+import PortfolioService from '../services/portfolioService';
 import '../assets/styles/Portfolio.css';
 
 const Portfolio = () => {
@@ -16,11 +18,30 @@ const Portfolio = () => {
   });
 
   useEffect(() => {
-    // TODO: Fetch portfolio from backend
-    // For now, load from localStorage
-    const savedPortfolio = localStorage.getItem(`portfolio_${user?.id}`);
-    if (savedPortfolio) {
-      setPortfolio(JSON.parse(savedPortfolio));
+    // Fetch portfolio from backend
+    const fetchPortfolio = async () => {
+      try {
+        const response = await PortfolioService.getTotalNetHolding();
+        if (response.status === 'success') {
+          // The response gives us total holding, we should fetch individual holdings
+          // For now, load from localStorage as fallback
+          const savedPortfolio = localStorage.getItem(`portfolio_${user?.id}`);
+          if (savedPortfolio) {
+            setPortfolio(JSON.parse(savedPortfolio));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error);
+        // Fallback to localStorage
+        const savedPortfolio = localStorage.getItem(`portfolio_${user?.id}`);
+        if (savedPortfolio) {
+          setPortfolio(JSON.parse(savedPortfolio));
+        }
+      }
+    };
+
+    if (user?.id) {
+      fetchPortfolio();
     }
   }, [user]);
 
@@ -32,7 +53,7 @@ const Portfolio = () => {
     setTotalValue(total);
   }, [portfolio]);
 
-  const handleAddCoin = (e) => {
+  const handleAddCoin = async (e) => {
     e.preventDefault();
     
     if (!newCoin.symbol || !newCoin.amount || !newCoin.buyPrice) {
@@ -40,27 +61,54 @@ const Portfolio = () => {
       return;
     }
 
-    const coinToAdd = {
-      id: Date.now(),
-      symbol: newCoin.symbol.toUpperCase(),
-      amount: parseFloat(newCoin.amount),
-      buyPrice: parseFloat(newCoin.buyPrice),
-      currentPrice: parseFloat(newCoin.buyPrice), // TODO: Fetch real-time price
-      timestamp: new Date().toISOString()
-    };
+    try {
+      // Add holding to backend
+      const portfolioResponse = await PortfolioService.addHolding(
+        newCoin.symbol.toLowerCase(),
+        parseFloat(newCoin.amount)
+      );
 
-    const updatedPortfolio = [...portfolio, coinToAdd];
-    setPortfolio(updatedPortfolio);
-    localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
-    
-    setNewCoin({ symbol: '', amount: '', buyPrice: '' });
-    setShowAddForm(false);
+      // Fetch real-time price for the coin
+      const coinResponse = await CoinService.getCoinById(newCoin.symbol.toLowerCase());
+      const currentPrice = coinResponse.data?.current_price || parseFloat(newCoin.buyPrice);
+
+      const coinToAdd = {
+        id: Date.now(),
+        symbol: newCoin.symbol.toUpperCase(),
+        amount: parseFloat(newCoin.amount),
+        buyPrice: parseFloat(newCoin.buyPrice),
+        currentPrice: currentPrice,
+        timestamp: new Date().toISOString()
+      };
+
+      const updatedPortfolio = [...portfolio, coinToAdd];
+      setPortfolio(updatedPortfolio);
+      localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
+      
+      setNewCoin({ symbol: '', amount: '', buyPrice: '' });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to add coin to portfolio:', error);
+      alert('Failed to add coin to portfolio. Please try again.');
+    }
   };
 
-  const handleRemoveCoin = (id) => {
-    const updatedPortfolio = portfolio.filter(coin => coin.id !== id);
-    setPortfolio(updatedPortfolio);
-    localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
+  const handleRemoveCoin = async (id) => {
+    try {
+      const coinToRemove = portfolio.find(coin => coin.id === id);
+      if (coinToRemove) {
+        // Remove from backend
+        await PortfolioService.removeHolding(coinToRemove.symbol.toLowerCase());
+        
+        // Update local state
+        const updatedPortfolio = portfolio.filter(coin => coin.id !== id);
+        setPortfolio(updatedPortfolio);
+        localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
+      }
+    } catch (error) {
+      console.error('Failed to remove coin from portfolio:', error);
+      alert('Failed to remove coin. Please try again.');
+    }
   };
 
   const handleLogout = () => {
