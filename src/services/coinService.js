@@ -1,5 +1,6 @@
 const API_BASE_URL = 'http://20.251.246.218/pricing-service';
 
+
 // Helper function to make requests to pricing service
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
   const options = {

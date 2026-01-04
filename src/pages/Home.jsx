@@ -20,7 +20,6 @@ const Home = () => {
         }
       } catch (error) {
         console.error('Failed to fetch coins:', error);
-        // Fallback to empty array on error
         setCoins([]);
       } finally {
         setLoading(false);
