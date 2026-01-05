@@ -8,14 +8,13 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for session management
   };
 
   if (data) {
     options.body = JSON.stringify(data);
   }
 
-  // Add auth token from localStorage if available
+  // Add JWT token from localStorage if available
   const token = localStorage.getItem('authToken');
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
@@ -59,7 +58,7 @@ export const AuthService = {
         password,
       });
 
-      // Store auth token if provided
+      // Store JWT token if provided
       if (response.token) {
         localStorage.setItem('authToken', response.token);
       }
@@ -74,26 +73,17 @@ export const AuthService = {
   logout: async () => {
     try {
       const response = await makeRequest('/api/logout', 'POST');
-      // Clear stored auth data
+      // Clear stored auth token
       localStorage.removeItem('authToken');
       return response;
     } catch (error) {
-      // Still clear auth data even if logout request fails
+      // Still clear auth token even if logout request fails
       localStorage.removeItem('authToken');
       throw error;
     }
   },
 
-  // Verify current session
-  verifySession: async () => {
-    try {
-      const response = await makeRequest('/api/verify-session', 'GET');
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
+  // Verify JWT token validity
   // Get current user information
   getCurrentUser: async () => {
     try {

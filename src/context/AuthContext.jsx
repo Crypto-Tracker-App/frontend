@@ -8,17 +8,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in by verifying session
+    // Check if user is already logged in by checking token
     const initializeAuth = async () => {
       try {
-        const response = await AuthService.verifySession();
-        if (response.user) {
-          setUser(response.user);
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // Verify the token is still valid
+          const response = await AuthService.verifySession();
+          if (response.user) {
+            setUser(response.user);
+          } else {
+            // Token is invalid, clear it
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+          }
         }
       } catch (error) {
-        // Session invalid or expired, clear any stored data
-        localStorage.removeItem('user');
+        // Token invalid or expired, clear any stored data
         localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
       } finally {
         setLoading(false);
       }
@@ -30,8 +38,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const result = await AuthService.login(username, password);
-      if (result.user) {
+      if (result.token && result.user) {
         setUser(result.user);
+        localStorage.setItem('authToken', result.token);
         localStorage.setItem('user', JSON.stringify(result.user));
         return { success: true };
       }
@@ -47,8 +56,9 @@ export const AuthProvider = ({ children }) => {
       if (result.message) {
         // After successful registration, auto-login the user
         const loginResult = await AuthService.login(username, password);
-        if (loginResult.user) {
+        if (loginResult.token && loginResult.user) {
           setUser(loginResult.user);
+          localStorage.setItem('authToken', loginResult.token);
           localStorage.setItem('user', JSON.stringify(loginResult.user));
           return { success: true };
         }
@@ -66,6 +76,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
     }
   };

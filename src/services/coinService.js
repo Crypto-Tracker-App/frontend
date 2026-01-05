@@ -8,14 +8,13 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for session management
   };
 
   if (data) {
     options.body = JSON.stringify(data);
   }
 
-  // Add auth token from localStorage if available
+  // Add JWT token from localStorage if available
   const token = localStorage.getItem('authToken');
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
