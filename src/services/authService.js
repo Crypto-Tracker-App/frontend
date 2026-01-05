@@ -84,6 +84,32 @@ export const AuthService = {
   },
 
   // Verify JWT token validity
+  verifySession: async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No token found');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/verify-session`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Session verification error:', error);
+      throw error;
+    }
+  },
+
   // Get current user information
   getCurrentUser: async () => {
     try {
