@@ -40,7 +40,7 @@ export const PortfolioService = {
   // Get total net holding value for the current user
   getTotalNetHolding: async () => {
     try {
-      const response = await makeRequest('/total', 'GET');
+      const response = await makeRequest('/api/total', 'GET');
       return response;
     } catch (error) {
       throw error;
@@ -52,7 +52,7 @@ export const PortfolioService = {
   // amount: Amount of the coin to add
   addHolding: async (coinId, amount) => {
     try {
-      const response = await makeRequest('/add', 'POST', {
+      const response = await makeRequest('/api/add', 'POST', {
         coin_id: coinId,
         amount: amount,
       });
@@ -66,7 +66,7 @@ export const PortfolioService = {
   // coin_id: CoinGecko coin id (e.g., bitcoin, ethereum)
   removeHolding: async (coinId) => {
     try {
-      const response = await makeRequest('/remove', 'POST', {
+      const response = await makeRequest('/api/remove', 'POST', {
         coin_id: coinId,
       });
       return response;

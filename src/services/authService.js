@@ -41,7 +41,7 @@ export const AuthService = {
   // Register a new user
   register: async (username, password) => {
     try {
-      const response = await makeRequest('/register', 'POST', {
+      const response = await makeRequest('/api/register', 'POST', {
         username,
         password,
       });
@@ -54,7 +54,7 @@ export const AuthService = {
   // Login user
   login: async (username, password) => {
     try {
-      const response = await makeRequest('/login', 'POST', {
+      const response = await makeRequest('/api/login', 'POST', {
         username,
         password,
       });
@@ -73,7 +73,7 @@ export const AuthService = {
   // Logout user
   logout: async () => {
     try {
-      const response = await makeRequest('/logout', 'POST');
+      const response = await makeRequest('/api/logout', 'POST');
       // Clear stored auth data
       localStorage.removeItem('authToken');
       return response;
@@ -87,7 +87,7 @@ export const AuthService = {
   // Verify current session
   verifySession: async () => {
     try {
-      const response = await makeRequest('/verify-session', 'GET');
+      const response = await makeRequest('/api/verify-session', 'GET');
       return response;
     } catch (error) {
       throw error;
@@ -97,7 +97,7 @@ export const AuthService = {
   // Get current user information
   getCurrentUser: async () => {
     try {
-      const response = await makeRequest('/current-user', 'GET');
+      const response = await makeRequest('/api/current-user', 'GET');
       return response;
     } catch (error) {
       throw error;
