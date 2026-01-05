@@ -94,9 +94,9 @@ const Home = () => {
                     <td>{index + 1}</td>
                     <td className="coin-name">{coin.name}</td>
                     <td className="coin-symbol">{coin.symbol}</td>
-                    <td className="coin-price">${typeof coin.current_price === 'number' ? coin.current_price.toLocaleString() : coin.price?.toLocaleString() || 'N/A'}</td>
-                    <td className={coin.market_cap_change_percentage_24h >= 0 ? 'change-positive' : 'change-negative'}>
-                      {coin.market_cap_change_percentage_24h >= 0 ? '+' : ''}{coin.market_cap_change_percentage_24h?.toFixed(2) || coin.change24h?.toFixed(2) || 'N/A'}%
+                    <td className="coin-price">€{typeof coin.current_price === 'number' ? coin.current_price.toLocaleString() : coin.price?.toLocaleString() || 'N/A'}</td>
+                    <td className={coin.price_change_percentage_24h >= 0 ? 'change-positive' : 'change-negative'}>
+                      {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h?.toFixed(2) || 'N/A'}% ({coin.price_change_24h >= 0 ? '+' : ''}€{coin.price_change_24h?.toFixed(2) || 'N/A'})
                     </td>
                   </tr>
                 ))}
