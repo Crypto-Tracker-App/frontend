@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in by checking token
@@ -13,6 +14,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('authToken');
         if (token) {
+          setHasToken(true);
           // Verify the token is still valid
           const response = await AuthService.verifySession();
           if (response.user) {
@@ -21,12 +23,14 @@ export const AuthProvider = ({ children }) => {
             // Token is invalid, clear it
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
+            setHasToken(false);
           }
         }
       } catch (error) {
         // Token invalid or expired, clear any stored data
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
+        setHasToken(false);
       } finally {
         setLoading(false);
       }
@@ -39,9 +43,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const result = await AuthService.login(username, password);
       if (result.token && result.user) {
-        setUser(result.user);
         localStorage.setItem('authToken', result.token);
         localStorage.setItem('user', JSON.stringify(result.user));
+        setHasToken(true);
+        setUser(result.user);
         return { success: true };
       }
       return { success: false, error: 'Login failed' };
@@ -57,9 +62,10 @@ export const AuthProvider = ({ children }) => {
         // After successful registration, auto-login the user
         const loginResult = await AuthService.login(username, password);
         if (loginResult.token && loginResult.user) {
-          setUser(loginResult.user);
           localStorage.setItem('authToken', loginResult.token);
           localStorage.setItem('user', JSON.stringify(loginResult.user));
+          setHasToken(true);
+          setUser(loginResult.user);
           return { success: true };
         }
       }
@@ -76,6 +82,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      setHasToken(false);
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
     }
@@ -87,7 +94,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     loading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    hasToken
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

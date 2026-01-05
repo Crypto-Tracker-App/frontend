@@ -6,7 +6,7 @@ import PortfolioService from '../services/portfolioService';
 import '../assets/styles/Portfolio.css';
 
 const Portfolio = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasToken } = useAuth();
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
@@ -40,10 +40,10 @@ const Portfolio = () => {
       }
     };
 
-    if (user?.id) {
+    if (user?.id && hasToken) {
       fetchPortfolio();
     }
-  }, [user]);
+  }, [user, hasToken]);
 
   useEffect(() => {
     // Calculate total portfolio value
