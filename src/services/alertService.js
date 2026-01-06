@@ -1,6 +1,6 @@
-const API_BASE_URL = 'http://20.251.246.218/portfolio-service';
+const API_BASE_URL = 'http://20.251.246.218/alert-service';
 
-// Helper function to make requests to portfolio service
+// Helper function to make requests to alert service
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
   const options = {
     method,
@@ -15,11 +15,11 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
 
   // Add JWT token from localStorage if available
   const token = localStorage.getItem('authToken');
-  console.log('PortfolioService - Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN FOUND');
+  console.log('AlertService - Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN FOUND');
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
   } else {
-    console.error('PortfolioService - No auth token found in localStorage');
+    console.error('AlertService - No auth token found in localStorage');
   }
 
   try {
@@ -28,7 +28,7 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
     // Handle non-200 responses
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('PortfolioService - Error response:', {
+      console.error('AlertService - Error response:', {
         status: response.status,
         errorData,
         endpoint,
@@ -44,25 +44,25 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
   }
 };
 
-export const PortfolioService = {
-  // Get total net holding value for the current user
-  getTotalNetHolding: async () => {
+export const AlertService = {
+  // Get all active alerts for the current user
+  getAlerts: async () => {
     try {
-      const response = await makeRequest('/api/total', 'GET');
+      const response = await makeRequest('/api/alerts', 'GET');
       return response;
     } catch (error) {
       throw error;
     }
   },
 
-  // Add a new holding to the portfolio
+  // Create a new price alert
   // coin_id: CoinGecko coin id (e.g., bitcoin, ethereum)
-  // amount: Amount of the coin to add
-  addHolding: async (coinId, amount) => {
+  // threshold_price: Price at which to trigger the alert
+  createAlert: async (coinId, thresholdPrice) => {
     try {
-      const response = await makeRequest('/api/add', 'POST', {
+      const response = await makeRequest('/api/set-alert', 'POST', {
         coin_id: coinId,
-        amount: amount,
+        threshold_price: thresholdPrice,
       });
       return response;
     } catch (error) {
@@ -70,13 +70,11 @@ export const PortfolioService = {
     }
   },
 
-  // Remove a holding from the portfolio
-  // coin_id: CoinGecko coin id (e.g., bitcoin, ethereum)
-  removeHolding: async (coinId) => {
+  // Delete/deactivate an alert
+  // alert_id: ID of the alert to delete
+  deleteAlert: async (alertId) => {
     try {
-      const response = await makeRequest('/api/remove', 'POST', {
-        coin_id: coinId,
-      });
+      const response = await makeRequest(`/api/alerts/${alertId}`, 'DELETE');
       return response;
     } catch (error) {
       throw error;
@@ -84,4 +82,4 @@ export const PortfolioService = {
   },
 };
 
-export default PortfolioService;
+export default AlertService;

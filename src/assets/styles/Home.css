@@ -26,7 +26,15 @@
 
 .header-actions {
   display: flex;
-  gap: 15px;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
   align-items: center;
 }
 
@@ -43,6 +51,22 @@
 }
 
 .portfolio-button:hover {
+  transform: translateY(-2px);
+}
+
+.alerts-button {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.alerts-button:hover {
   transform: translateY(-2px);
 }
 

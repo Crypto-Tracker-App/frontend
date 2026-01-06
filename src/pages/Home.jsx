@@ -33,6 +33,10 @@ const Home = () => {
     navigate('/portfolio');
   };
 
+  const handleAlertsClick = () => {
+    navigate('/alerts');
+  };
+
   const handleLoginClick = () => {
     navigate('/login');
   };
@@ -48,9 +52,14 @@ const Home = () => {
           <h1>🪙 Crypto Tracker</h1>
           <div className="header-actions">
             {isAuthenticated && (
-              <button onClick={handlePortfolioClick} className="portfolio-button">
-                My Portfolio
-              </button>
+              <div className="nav-buttons">
+                <button onClick={handlePortfolioClick} className="portfolio-button">
+                  My Portfolio
+                </button>
+                <button onClick={handleAlertsClick} className="alerts-button">
+                  Alerts
+                </button>
+              </div>
             )}
             {isAuthenticated ? (
               <div className="user-section">
