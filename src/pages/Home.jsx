@@ -8,19 +8,23 @@ const Home = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [coins, setCoins] = useState([]);
+  const [filteredCoins, setFilteredCoins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchCoins = async () => {
       setLoading(true);
       try {
-        const response = await CoinService.getTopCoins(10, 0);
+        const response = await CoinService.getTopCoins(100, 0);
         if (response.status === 'success' && response.data) {
           setCoins(response.data);
+          setFilteredCoins(response.data);
         }
       } catch (error) {
         console.error('Failed to fetch coins:', error);
         setCoins([]);
+        setFilteredCoins([]);
       } finally {
         setLoading(false);
       }
@@ -28,6 +32,14 @@ const Home = () => {
 
     fetchCoins();
   }, []);
+
+  useEffect(() => {
+    const filtered = coins.filter((coin) =>
+      coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredCoins(filtered);
+  }, [searchQuery, coins]);
 
   const handlePortfolioClick = () => {
     navigate('/portfolio');
@@ -83,6 +95,17 @@ const Home = () => {
           <p className="subtitle">Live prices updated in real-time</p>
         </div>
 
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="Search by name or symbol..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-box"
+          />
+          <span className="search-icon">🔍</span>
+        </div>
+
         {loading ? (
           <div className="loading">Loading coins...</div>
         ) : (
@@ -98,7 +121,7 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody>
-                {coins.map((coin, index) => (
+                {filteredCoins.map((coin, index) => (
                   <tr key={coin.id || index}>
                     <td>{index + 1}</td>
                     <td className="coin-name">{coin.name}</td>
