@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertService from '../services/alertService';
+import NotificationService from '../services/notificationService';
 import '../assets/styles/Alerts.css';
 
 const Alerts = () => {
@@ -15,6 +16,7 @@ const Alerts = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
 
   useEffect(() => {
     // Fetch alerts from backend
@@ -35,10 +37,25 @@ const Alerts = () => {
       }
     };
 
+    // Check notification permission
+    if (NotificationService.isSupported()) {
+      setNotificationEnabled(Notification.permission === 'granted');
+    }
+
     if (user?.id && hasToken) {
       fetchAlerts();
     }
   }, [user, hasToken]);
+
+  const handleEnableNotifications = async () => {
+    try {
+      await NotificationService.subscribe(hasToken);
+      setNotificationEnabled(true);
+    } catch (error) {
+      console.error('Failed to enable notifications:', error);
+      setError('Failed to enable notifications. Please try again.');
+    }
+  };
 
   const handleAddAlert = async (e) => {
     e.preventDefault();
@@ -119,6 +136,17 @@ const Alerts = () => {
         >
           {showAddForm ? 'Cancel' : '+ Add Alert'}
         </button>
+        {NotificationService.isSupported() && !notificationEnabled && (
+          <button 
+            onClick={handleEnableNotifications}
+            className="notification-button"
+          >
+            🔔 Enable Push Notifications
+          </button>
+        )}
+        {notificationEnabled && (
+          <span className="notification-enabled">🔔 Notifications Enabled</span>
+        )}
         <button onClick={() => navigate('/')} className="back-button">
           Back to Home
         </button>
