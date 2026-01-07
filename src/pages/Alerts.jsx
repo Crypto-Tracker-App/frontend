@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CoinService from '../services/coinService';
 import AlertService from '../services/alertService';
 import NotificationService from '../services/notificationService';
 import '../assets/styles/Alerts.css';
@@ -12,11 +13,16 @@ const Alerts = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAlert, setNewAlert] = useState({
     coinId: '',
+    coinName: '',
+    coinSymbol: '',
     thresholdPrice: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedCoin, setSelectedCoin] = useState(null);
 
   useEffect(() => {
     // Fetch alerts from backend
@@ -57,18 +63,49 @@ const Alerts = () => {
     }
   };
 
+  const handleSearchCoin = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await CoinService.searchCoins(query, 10);
+      if (response.status === 'success' && response.data) {
+        setSearchResults(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to search coins:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleCoinSelect = (coin) => {
+    setNewAlert({
+      coinId: coin.id,
+      coinName: coin.name,
+      coinSymbol: coin.symbol.toUpperCase(),
+      thresholdPrice: newAlert.thresholdPrice
+    });
+    setSelectedCoin(coin);
+    setSearchResults([]);
+  };
+
   const handleAddAlert = async (e) => {
     e.preventDefault();
     
     if (!newAlert.coinId || !newAlert.thresholdPrice) {
-      alert('Please fill in all fields');
+      alert('Please select a coin and fill in the threshold price');
       return;
     }
 
     try {
       setError(null);
       const response = await AlertService.createAlert(
-        newAlert.coinId.toLowerCase(),
+        newAlert.coinId,
         parseFloat(newAlert.thresholdPrice)
       );
 
@@ -76,12 +113,15 @@ const Alerts = () => {
       setAlerts([...alerts, {
         id: response.id,
         coin_id: response.coin_id,
+        coin_name: newAlert.coinName,
+        coin_symbol: newAlert.coinSymbol,
         threshold_price: response.threshold_price,
         is_active: response.is_active,
         created_at: response.created_at
       }]);
       
-      setNewAlert({ coinId: '', thresholdPrice: '' });
+      setNewAlert({ coinId: '', coinName: '', coinSymbol: '', thresholdPrice: '' });
+      setSelectedCoin(null);
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to create alert:', error);
@@ -157,14 +197,40 @@ const Alerts = () => {
           <form onSubmit={handleAddAlert} className="add-form">
             <h3>Create New Price Alert</h3>
             <div className="form-group">
-              <label>Coin ID (e.g., bitcoin, ethereum)</label>
+              <label>Name or Symbol (e.g., Bitcoin, BTC, Ethereum, ETH)</label>
               <input
                 type="text"
-                value={newAlert.coinId}
-                onChange={(e) => setNewAlert({...newAlert, coinId: e.target.value})}
-                placeholder="bitcoin"
+                value={newAlert.coinSymbol}
+                onChange={(e) => {
+                  setNewAlert({...newAlert, coinSymbol: e.target.value});
+                  handleSearchCoin(e.target.value);
+                }}
+                placeholder="Bitcoin or BTC"
+                autoComplete="off"
               />
+              {searchLoading && <div className="search-loading">Searching...</div>}
+              {searchResults.length > 0 && (
+                <div className="search-results">
+                  {searchResults.map((coin) => (
+                    <div
+                      key={coin.id}
+                      className="search-result-item"
+                      onClick={() => handleCoinSelect(coin)}
+                    >
+                      <div className="coin-info">
+                        <div className="coin-name">{coin.name} ({coin.symbol.toUpperCase()})</div>
+                        <div className="coin-price">€{coin.current_price?.toFixed(2) || 'N/A'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+            {selectedCoin && (
+              <div className="selected-coin-info">
+                <p>✓ Selected: {selectedCoin.name} ({selectedCoin.symbol.toUpperCase()}) - Current Price: €{selectedCoin.current_price?.toFixed(2)}</p>
+              </div>
+            )}
             <div className="form-group">
               <label>Threshold Price (€)</label>
               <input
@@ -193,7 +259,7 @@ const Alerts = () => {
             {alerts.map((alert) => (
               <div key={alert.id} className="alert-card">
                 <div className="alert-header">
-                  <h3 className="coin-id">{alert.coin_id.toUpperCase()}</h3>
+                  <h3 className="coin-id">{alert.coin_name || alert.coin_id} ({alert.coin_symbol || alert.coin_id.toUpperCase()})</h3>
                   <span className={`status ${alert.is_active ? 'active' : 'inactive'}`}>
                     {alert.is_active ? 'Active' : 'Inactive'}
                   </span>
