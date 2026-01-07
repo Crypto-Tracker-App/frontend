@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertService from '../services/alertService';
+import CoinService from '../services/coinService';
 import NotificationService from '../services/notificationService';
 import '../assets/styles/Alerts.css';
 
@@ -12,8 +13,15 @@ const Alerts = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAlert, setNewAlert] = useState({
     coinId: '',
+    coinName: '',
+    coinSymbol: '',
+    currentPrice: null,
     thresholdPrice: ''
   });
+  const [coinSearchResults, setCoinSearchResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
@@ -57,11 +65,51 @@ const Alerts = () => {
     }
   };
 
+  const handleCoinSearch = async (query) => {
+    setSearchQuery(query);
+    
+    if (query.trim().length === 0) {
+      setCoinSearchResults([]);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const response = await CoinService.searchCoins(query, 10);
+      if (response.status === 'success' && response.data) {
+        // The search endpoint returns a single coin, but we'll wrap it in an array for consistency
+        setCoinSearchResults([response.data]);
+        setShowSearchDropdown(true);
+      } else {
+        setCoinSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Failed to search coins:', error);
+      setCoinSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectCoin = (coin) => {
+    setNewAlert({
+      coinId: coin.id,
+      coinName: coin.name,
+      coinSymbol: coin.symbol.toUpperCase(),
+      currentPrice: coin.current_price,
+      thresholdPrice: ''
+    });
+    setSearchQuery('');
+    setCoinSearchResults([]);
+    setShowSearchDropdown(false);
+  };
+
   const handleAddAlert = async (e) => {
     e.preventDefault();
     
     if (!newAlert.coinId || !newAlert.thresholdPrice) {
-      alert('Please fill in all fields');
+      alert('Please select a coin and enter a threshold price');
       return;
     }
 
@@ -81,7 +129,7 @@ const Alerts = () => {
         created_at: response.created_at
       }]);
       
-      setNewAlert({ coinId: '', thresholdPrice: '' });
+      setNewAlert({ coinId: '', coinName: '', coinSymbol: '', currentPrice: null, thresholdPrice: '' });
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to create alert:', error);
@@ -157,25 +205,69 @@ const Alerts = () => {
           <form onSubmit={handleAddAlert} className="add-form">
             <h3>Create New Price Alert</h3>
             <div className="form-group">
-              <label>Coin ID (e.g., bitcoin, ethereum)</label>
-              <input
-                type="text"
-                value={newAlert.coinId}
-                onChange={(e) => setNewAlert({...newAlert, coinId: e.target.value})}
-                placeholder="bitcoin"
-              />
+              <label>Search Coin</label>
+              <div className="search-wrapper">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleCoinSearch(e.target.value)}
+                  placeholder="Search by name or symbol (e.g., Bitcoin, BTC)"
+                  onFocus={() => coinSearchResults.length > 0 && setShowSearchDropdown(true)}
+                  disabled={newAlert.coinId !== ''}
+                />
+                {searching && <span className="search-status">Searching...</span>}
+                {showSearchDropdown && coinSearchResults.length > 0 && (
+                  <div className="search-dropdown">
+                    {coinSearchResults.map((coin) => (
+                      <div
+                        key={coin.id}
+                        className="search-result-item"
+                        onClick={() => handleSelectCoin(coin)}
+                      >
+                        <div className="coin-info">
+                          <strong>{coin.name}</strong>
+                          <span className="coin-symbol">{coin.symbol.toUpperCase()}</span>
+                        </div>
+                        <div className="coin-price">
+                          €{coin.current_price?.toLocaleString('de-DE', { maximumFractionDigits: 2 }) || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="form-group">
-              <label>Threshold Price (€)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={newAlert.thresholdPrice}
-                onChange={(e) => setNewAlert({...newAlert, thresholdPrice: e.target.value})}
-                placeholder="50000"
-              />
-            </div>
-            <button type="submit" className="submit-button">Create Alert</button>
+            {newAlert.coinId && (
+              <>
+                <div className="selected-coin-info">
+                  <strong>{newAlert.coinName} ({newAlert.coinSymbol})</strong>
+                  <p>Current Price: €{newAlert.currentPrice?.toLocaleString('de-DE', { maximumFractionDigits: 2 }) || 'Loading...'}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewAlert({ coinId: '', coinName: '', coinSymbol: '', currentPrice: null, thresholdPrice: '' });
+                      setSearchQuery('');
+                    }}
+                    className="change-coin-button"
+                  >
+                    Change Coin
+                  </button>
+                </div>
+                <div className="form-group">
+                  <label>Threshold Price (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newAlert.thresholdPrice}
+                    onChange={(e) => setNewAlert({...newAlert, thresholdPrice: e.target.value})}
+                    placeholder="50000"
+                  />
+                </div>
+              </>
+            )}
+            <button type="submit" className="submit-button" disabled={!newAlert.coinId}>
+              Create Alert
+            </button>
           </form>
         </div>
       )}

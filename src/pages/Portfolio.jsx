@@ -12,10 +12,17 @@ const Portfolio = () => {
   const [totalValue, setTotalValue] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCoin, setNewCoin] = useState({
+    id: '',
     symbol: '',
+    name: '',
     amount: '',
-    buyPrice: ''
+    buyPrice: '',
+    currentPrice: null
   });
+  const [coinSearchResults, setCoinSearchResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     // Fetch portfolio from backend
@@ -53,31 +60,69 @@ const Portfolio = () => {
     setTotalValue(total);
   }, [portfolio]);
 
+  const handleCoinSearch = async (query) => {
+    setSearchQuery(query);
+    
+    if (query.trim().length === 0) {
+      setCoinSearchResults([]);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const response = await CoinService.searchCoins(query, 10);
+      if (response.status === 'success' && response.data) {
+        // The search endpoint returns a single coin, but we'll wrap it in an array for consistency
+        setCoinSearchResults([response.data]);
+        setShowSearchDropdown(true);
+      } else {
+        setCoinSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Failed to search coins:', error);
+      setCoinSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectCoin = (coin) => {
+    setNewCoin({
+      id: coin.id,
+      symbol: coin.symbol.toUpperCase(),
+      name: coin.name,
+      amount: '',
+      buyPrice: '',
+      currentPrice: coin.current_price
+    });
+    setSearchQuery('');
+    setCoinSearchResults([]);
+    setShowSearchDropdown(false);
+  };
+
   const handleAddCoin = async (e) => {
     e.preventDefault();
     
-    if (!newCoin.symbol || !newCoin.amount || !newCoin.buyPrice) {
-      alert('Please fill in all fields');
+    if (!newCoin.id || !newCoin.amount || !newCoin.buyPrice) {
+      alert('Please select a coin and fill in all fields');
       return;
     }
 
     try {
       // Add holding to backend
       const portfolioResponse = await PortfolioService.addHolding(
-        newCoin.symbol.toLowerCase(),
+        newCoin.id.toLowerCase(),
         parseFloat(newCoin.amount)
       );
 
-      // Fetch real-time price for the coin
-      const coinResponse = await CoinService.getCoinById(newCoin.symbol.toLowerCase());
-      const currentPrice = coinResponse.data?.current_price || parseFloat(newCoin.buyPrice);
-
       const coinToAdd = {
         id: Date.now(),
-        symbol: newCoin.symbol.toUpperCase(),
+        symbol: newCoin.symbol,
+        name: newCoin.name,
         amount: parseFloat(newCoin.amount),
         buyPrice: parseFloat(newCoin.buyPrice),
-        currentPrice: currentPrice,
+        currentPrice: newCoin.currentPrice || parseFloat(newCoin.buyPrice),
         timestamp: new Date().toISOString()
       };
 
@@ -85,7 +130,7 @@ const Portfolio = () => {
       setPortfolio(updatedPortfolio);
       localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
       
-      setNewCoin({ symbol: '', amount: '', buyPrice: '' });
+      setNewCoin({ id: '', symbol: '', name: '', amount: '', buyPrice: '', currentPrice: null });
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to add coin to portfolio:', error);
@@ -162,35 +207,79 @@ const Portfolio = () => {
           <form onSubmit={handleAddCoin} className="add-form">
             <h3>Add New Coin</h3>
             <div className="form-group">
-              <label>Symbol (e.g., BTC, ETH)</label>
-              <input
-                type="text"
-                value={newCoin.symbol}
-                onChange={(e) => setNewCoin({...newCoin, symbol: e.target.value})}
-                placeholder="BTC"
-              />
+              <label>Search Coin</label>
+              <div className="search-wrapper">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleCoinSearch(e.target.value)}
+                  placeholder="Search by name or symbol (e.g., Bitcoin, BTC)"
+                  onFocus={() => coinSearchResults.length > 0 && setShowSearchDropdown(true)}
+                  disabled={newCoin.id !== ''}
+                />
+                {searching && <span className="search-status">Searching...</span>}
+                {showSearchDropdown && coinSearchResults.length > 0 && (
+                  <div className="search-dropdown">
+                    {coinSearchResults.map((coin) => (
+                      <div
+                        key={coin.id}
+                        className="search-result-item"
+                        onClick={() => handleSelectCoin(coin)}
+                      >
+                        <div className="coin-info">
+                          <strong>{coin.name}</strong>
+                          <span className="coin-symbol">{coin.symbol.toUpperCase()}</span>
+                        </div>
+                        <div className="coin-price">
+                          ${coin.current_price?.toFixed(2) || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="form-group">
-              <label>Amount</label>
-              <input
-                type="number"
-                step="0.00000001"
-                value={newCoin.amount}
-                onChange={(e) => setNewCoin({...newCoin, amount: e.target.value})}
-                placeholder="0.5"
-              />
-            </div>
-            <div className="form-group">
-              <label>Buy Price ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={newCoin.buyPrice}
-                onChange={(e) => setNewCoin({...newCoin, buyPrice: e.target.value})}
-                placeholder="50000"
-              />
-            </div>
-            <button type="submit" className="submit-button">Add to Portfolio</button>
+            {newCoin.id && (
+              <>
+                <div className="selected-coin-info">
+                  <strong>{newCoin.name} ({newCoin.symbol})</strong>
+                  <p>Current Price: ${newCoin.currentPrice?.toFixed(2) || 'Loading...'}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCoin({ id: '', symbol: '', name: '', amount: '', buyPrice: '', currentPrice: null });
+                      setSearchQuery('');
+                    }}
+                    className="change-coin-button"
+                  >
+                    Change Coin
+                  </button>
+                </div>
+                <div className="form-group">
+                  <label>Amount</label>
+                  <input
+                    type="number"
+                    step="0.00000001"
+                    value={newCoin.amount}
+                    onChange={(e) => setNewCoin({...newCoin, amount: e.target.value})}
+                    placeholder="0.5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Buy Price ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newCoin.buyPrice}
+                    onChange={(e) => setNewCoin({...newCoin, buyPrice: e.target.value})}
+                    placeholder="50000"
+                  />
+                </div>
+              </>
+            )}
+            <button type="submit" className="submit-button" disabled={!newCoin.id}>
+              Add to Portfolio
+            </button>
           </form>
         </div>
       )}
