@@ -63,25 +63,6 @@ export const CoinService = {
       throw error;
     }
   },
-
-  // Search for coins by name, ID, or symbol
-  // query: Search query (e.g., bitcoin, btc, eth)
-  // limit: Maximum number of results to return (default: 10, max: 100)
-  searchCoins: async (query, limit = 10) => {
-    try {
-      if (!query || query.trim() === '') {
-        return { status: 'success', data: null, count: 0 };
-      }
-      const params = new URLSearchParams({
-        q: query.trim(),
-        limit: Math.min(limit, 100),
-      });
-      const response = await makeRequest(`/api/search?${params}`, 'GET');
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
 };
 
 export default CoinService;
