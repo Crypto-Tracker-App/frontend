@@ -192,7 +192,6 @@ const Portfolio = () => {
         <div className="header-content">
           <h1>My Portfolio</h1>
           <div className="user-info">
-            <span>Welcome, {user?.name || user?.email}!</span>
             <button onClick={handleLogout} className="logout-button">Logout</button>
           </div>
         </div>

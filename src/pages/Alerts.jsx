@@ -164,7 +164,6 @@ const Alerts = () => {
         <div className="header-content">
           <h1>My Price Alerts</h1>
           <div className="user-info">
-            <span>Welcome, {user?.name || user?.email}!</span>
             <button onClick={handleLogout} className="logout-button">Logout</button>
           </div>
         </div>
