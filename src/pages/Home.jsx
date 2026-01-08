@@ -75,7 +75,6 @@ const Home = () => {
             )}
             {isAuthenticated ? (
               <div className="user-section">
-                <span className="user-name">Hello, {user?.name || user?.email}</span>
                 <button onClick={handleLogout} className="logout-button">
                   Logout
                 </button>
