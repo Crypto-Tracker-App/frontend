@@ -11,6 +11,7 @@ const Portfolio = () => {
   const [portfolio, setPortfolio] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [coinData, setCoinData] = useState({}); // Cache for coin data
   const [newCoin, setNewCoin] = useState({
     symbol: '',
     amount: '',
@@ -45,13 +46,48 @@ const Portfolio = () => {
     }
   }, [user, hasToken]);
 
+  const fetchCoinPrices = async (portfolioItems) => {
+    const newCoinData = { ...coinData };
+    for (const coin of portfolioItems) {
+      try {
+        // Match coin by symbol - convert symbol to lowercase for API
+        const response = await CoinService.getCoinById(coin.symbol.toLowerCase());
+        if (response.status === 'success' && response.data) {
+          newCoinData[coin.symbol.toLowerCase()] = response.data.current_price;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch price for ${coin.symbol}:`, error);
+        // Keep the buy price as fallback
+        newCoinData[coin.symbol.toLowerCase()] = coin.buyPrice;
+      }
+    }
+    setCoinData(newCoinData);
+  };
+
+  // Set up interval to refresh prices every 30 seconds when market data is updated
   useEffect(() => {
-    // Calculate total portfolio value
+    if (portfolio.length === 0) return;
+
+    // Fetch prices immediately
+    fetchCoinPrices(portfolio);
+
+    // Set up interval to refresh prices every 30 seconds
+    const priceRefreshInterval = setInterval(() => {
+      fetchCoinPrices(portfolio);
+    }, 30000); // 30 seconds
+
+    // Clean up interval on unmount or when portfolio changes
+    return () => clearInterval(priceRefreshInterval);
+  }, [portfolio]);
+
+  useEffect(() => {
+    // Calculate total portfolio value using current prices
     const total = portfolio.reduce((sum, coin) => {
-      return sum + (coin.amount * coin.currentPrice);
+      const currentPrice = coinData[coin.symbol.toLowerCase()] || coin.buyPrice;
+      return sum + (coin.amount * currentPrice);
     }, 0);
     setTotalValue(total);
-  }, [portfolio]);
+  }, [portfolio, coinData]);
 
   const handleAddCoin = async (e) => {
     e.preventDefault();
@@ -68,21 +104,36 @@ const Portfolio = () => {
         parseFloat(newCoin.amount)
       );
 
-      // Fetch real-time price for the coin
-      const coinResponse = await CoinService.getCoinById(newCoin.symbol.toLowerCase());
-      const currentPrice = coinResponse.data?.current_price || parseFloat(newCoin.buyPrice);
+      // Fetch real-time price for the coin using the /coin/<coin_id> endpoint
+      const coinSymbolLower = newCoin.symbol.toLowerCase();
+      let currentPrice = parseFloat(newCoin.buyPrice);
+      
+      try {
+        const coinResponse = await CoinService.getCoinById(coinSymbolLower);
+        if (coinResponse.status === 'success' && coinResponse.data?.current_price) {
+          currentPrice = coinResponse.data.current_price;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch current price for ${newCoin.symbol}:`, error);
+        // Use buy price as fallback
+      }
 
       const coinToAdd = {
         id: Date.now(),
         symbol: newCoin.symbol.toUpperCase(),
         amount: parseFloat(newCoin.amount),
         buyPrice: parseFloat(newCoin.buyPrice),
-        currentPrice: currentPrice,
         timestamp: new Date().toISOString()
       };
 
       const updatedPortfolio = [...portfolio, coinToAdd];
       setPortfolio(updatedPortfolio);
+      
+      // Update coin data cache with current price
+      const newCoinDataCache = { ...coinData };
+      newCoinDataCache[coinSymbolLower] = currentPrice;
+      setCoinData(newCoinDataCache);
+      
       localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
       
       setNewCoin({ symbol: '', amount: '', buyPrice: '' });
@@ -116,9 +167,9 @@ const Portfolio = () => {
     navigate('/');
   };
 
-  const calculateProfit = (coin) => {
-    const profit = (coin.currentPrice - coin.buyPrice) * coin.amount;
-    const profitPercent = ((coin.currentPrice - coin.buyPrice) / coin.buyPrice) * 100;
+  const calculateProfit = (coin, currentPrice) => {
+    const profit = (currentPrice - coin.buyPrice) * coin.amount;
+    const profitPercent = ((currentPrice - coin.buyPrice) / coin.buyPrice) * 100;
     return { profit, profitPercent };
   };
 
@@ -137,7 +188,7 @@ const Portfolio = () => {
       <div className="portfolio-summary">
         <div className="summary-card">
           <h3>Total Portfolio Value</h3>
-          <p className="total-value">${totalValue.toFixed(2)}</p>
+          <p className="total-value">€{totalValue.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</p>
         </div>
         <div className="summary-card">
           <h3>Holdings</h3>
@@ -181,7 +232,7 @@ const Portfolio = () => {
               />
             </div>
             <div className="form-group">
-              <label>Buy Price ($)</label>
+              <label>Buy Price (€)</label>
               <input
                 type="number"
                 step="0.01"
@@ -215,16 +266,17 @@ const Portfolio = () => {
             </thead>
             <tbody>
               {portfolio.map((coin) => {
-                const { profit, profitPercent } = calculateProfit(coin);
+                const currentPrice = coinData[coin.symbol.toLowerCase()] || coin.buyPrice;
+                const { profit, profitPercent } = calculateProfit(coin, currentPrice);
                 return (
                   <tr key={coin.id}>
                     <td className="coin-symbol">{coin.symbol}</td>
                     <td>{coin.amount.toFixed(8)}</td>
-                    <td>${coin.buyPrice.toFixed(2)}</td>
-                    <td>${coin.currentPrice.toFixed(2)}</td>
-                    <td>${(coin.amount * coin.currentPrice).toFixed(2)}</td>
+                    <td>€{coin.buyPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</td>
+                    <td>€{currentPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</td>
+                    <td>€{(coin.amount * currentPrice).toLocaleString('de-DE', { maximumFractionDigits: 2 })}</td>
                     <td className={profit >= 0 ? 'profit' : 'loss'}>
-                      ${profit.toFixed(2)} ({profitPercent.toFixed(2)}%)
+                      €{profit.toLocaleString('de-DE', { maximumFractionDigits: 2 })} ({profitPercent.toFixed(2)}%)
                     </td>
                     <td>
                       <button 

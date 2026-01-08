@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertService from '../services/alertService';
+import CoinService from '../services/coinService';
 import NotificationService from '../services/notificationService';
 import '../assets/styles/Alerts.css';
 
@@ -17,6 +18,7 @@ const Alerts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [coinData, setCoinData] = useState({}); // Cache for coin current prices
 
   useEffect(() => {
     // Fetch alerts from backend
@@ -47,6 +49,38 @@ const Alerts = () => {
     }
   }, [user, hasToken]);
 
+  const fetchCoinPrices = async (alertItems) => {
+    const newCoinData = { ...coinData };
+    for (const alert of alertItems) {
+      try {
+        // Match coin by ID using the /coin/<coin_id> endpoint
+        const response = await CoinService.getCoinById(alert.coin_id.toLowerCase());
+        if (response.status === 'success' && response.data) {
+          newCoinData[alert.coin_id.toLowerCase()] = response.data.current_price;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch price for ${alert.coin_id}:`, error);
+      }
+    }
+    setCoinData(newCoinData);
+  };
+
+  // Set up interval to refresh prices every 30 seconds when market data is updated
+  useEffect(() => {
+    if (alerts.length === 0) return;
+
+    // Fetch prices immediately
+    fetchCoinPrices(alerts);
+
+    // Set up interval to refresh prices every 30 seconds
+    const priceRefreshInterval = setInterval(() => {
+      fetchCoinPrices(alerts);
+    }, 30000); // 30 seconds
+
+    // Clean up interval on unmount or when alerts change
+    return () => clearInterval(priceRefreshInterval);
+  }, [alerts]);
+
   const handleEnableNotifications = async () => {
     try {
       await NotificationService.subscribe(hasToken);
@@ -67,10 +101,23 @@ const Alerts = () => {
 
     try {
       setError(null);
+      const coinIdLower = newAlert.coinId.toLowerCase();
       const response = await AlertService.createAlert(
-        newAlert.coinId.toLowerCase(),
+        coinIdLower,
         parseFloat(newAlert.thresholdPrice)
       );
+
+      // Fetch current price for the coin using the /coin/<coin_id> endpoint
+      try {
+        const coinResponse = await CoinService.getCoinById(coinIdLower);
+        if (coinResponse.status === 'success' && coinResponse.data) {
+          const newCoinDataCache = { ...coinData };
+          newCoinDataCache[coinIdLower] = coinResponse.data.current_price;
+          setCoinData(newCoinDataCache);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch current price for ${newAlert.coinId}:`, error);
+      }
 
       // Add the new alert to the list
       setAlerts([...alerts, {
@@ -190,32 +237,47 @@ const Alerts = () => {
           </div>
         ) : (
           <div className="alerts-grid">
-            {alerts.map((alert) => (
-              <div key={alert.id} className="alert-card">
-                <div className="alert-header">
-                  <h3 className="coin-id">{alert.coin_id.toUpperCase()}</h3>
-                  <span className={`status ${alert.is_active ? 'active' : 'inactive'}`}>
-                    {alert.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div className="alert-details">
-                  <div className="detail-row">
-                    <span className="label">Target Price:</span>
-                    <span className="value">€{parseFloat(alert.threshold_price).toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span>
+            {alerts.map((alert) => {
+              const currentPrice = coinData[alert.coin_id.toLowerCase()];
+              const isTriggered = currentPrice && currentPrice >= parseFloat(alert.threshold_price);
+              
+              return (
+                <div key={alert.id} className="alert-card">
+                  <div className="alert-header">
+                    <h3 className="coin-id">{alert.coin_id.toUpperCase()}</h3>
+                    <span className={`status ${alert.is_active ? 'active' : 'inactive'}`}>
+                      {alert.is_active ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
-                  <div className="detail-row">
-                    <span className="label">Created:</span>
-                    <span className="value">{new Date(alert.created_at).toLocaleDateString()}</span>
+                  <div className="alert-details">
+                    <div className="detail-row">
+                      <span className="label">Target Price:</span>
+                      <span className="value">€{parseFloat(alert.threshold_price).toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Current Price:</span>
+                      <span className="value">€{currentPrice ? currentPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 }) : 'Loading...'}</span>
+                    </div>
+                    {isTriggered && (
+                      <div className="detail-row triggered">
+                        <span className="label">Status:</span>
+                        <span className="value">🔔 Alert Triggered!</span>
+                      </div>
+                    )}
+                    <div className="detail-row">
+                      <span className="label">Created:</span>
+                      <span className="value">{new Date(alert.created_at).toLocaleDateString()}</span>
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => handleDeleteAlert(alert.id)}
+                    className="delete-button"
+                  >
+                    Delete Alert
+                  </button>
                 </div>
-                <button 
-                  onClick={() => handleDeleteAlert(alert.id)}
-                  className="delete-button"
-                >
-                  Delete Alert
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
