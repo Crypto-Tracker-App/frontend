@@ -16,7 +16,7 @@ const Home = () => {
     const fetchCoins = async () => {
       setLoading(true);
       try {
-        const response = await CoinService.getTopCoins(8000, 0);
+        const response = await CoinService.getTopCoins(100, 0);
         if (response.status === 'success' && response.data) {
           setCoins(response.data);
           setFilteredCoins(response.data);
