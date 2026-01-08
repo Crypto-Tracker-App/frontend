@@ -13,7 +13,7 @@ const Portfolio = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [coinData, setCoinData] = useState({}); // Cache for coin data
   const [newCoin, setNewCoin] = useState({
-    symbol: '',
+    coinId: '',
     amount: '',
     buyPrice: ''
   });
@@ -50,15 +50,15 @@ const Portfolio = () => {
     const newCoinData = { ...coinData };
     for (const coin of portfolioItems) {
       try {
-        // Match coin by symbol - convert symbol to lowercase for API
-        const response = await CoinService.getCoinById(coin.symbol.toLowerCase());
+        // Fetch by coin ID (e.g., bitcoin, ethereum)
+        const response = await CoinService.getCoinById(coin.coinId);
         if (response.status === 'success' && response.data) {
-          newCoinData[coin.symbol.toLowerCase()] = response.data.current_price;
+          newCoinData[coin.coinId] = response.data.current_price;
         }
       } catch (error) {
         console.error(`Failed to fetch price for ${coin.symbol}:`, error);
         // Keep the buy price as fallback
-        newCoinData[coin.symbol.toLowerCase()] = coin.buyPrice;
+        newCoinData[coin.coinId] = coin.buyPrice;
       }
     }
     setCoinData(newCoinData);
@@ -83,7 +83,7 @@ const Portfolio = () => {
   useEffect(() => {
     // Calculate total portfolio value using current prices
     const total = portfolio.reduce((sum, coin) => {
-      const currentPrice = coinData[coin.symbol.toLowerCase()] || coin.buyPrice;
+      const currentPrice = coinData[coin.coinId] || coin.buyPrice;
       return sum + (coin.amount * currentPrice);
     }, 0);
     setTotalValue(total);
@@ -92,35 +92,42 @@ const Portfolio = () => {
   const handleAddCoin = async (e) => {
     e.preventDefault();
     
-    if (!newCoin.symbol || !newCoin.amount || !newCoin.buyPrice) {
+    if (!newCoin.coinId || !newCoin.amount || !newCoin.buyPrice) {
       alert('Please fill in all fields');
       return;
     }
 
     try {
+      const coinIdLower = newCoin.coinId.toLowerCase();
+      
       // Add holding to backend
       const portfolioResponse = await PortfolioService.addHolding(
-        newCoin.symbol.toLowerCase(),
+        coinIdLower,
         parseFloat(newCoin.amount)
       );
 
       // Fetch real-time price for the coin using the /coin/<coin_id> endpoint
-      const coinSymbolLower = newCoin.symbol.toLowerCase();
       let currentPrice = parseFloat(newCoin.buyPrice);
+      let coinName = coinIdLower;
+      let coinSymbol = '';
       
       try {
-        const coinResponse = await CoinService.getCoinById(coinSymbolLower);
-        if (coinResponse.status === 'success' && coinResponse.data?.current_price) {
+        const coinResponse = await CoinService.getCoinById(coinIdLower);
+        if (coinResponse.status === 'success' && coinResponse.data) {
           currentPrice = coinResponse.data.current_price;
+          coinName = coinResponse.data.name || coinIdLower;
+          coinSymbol = coinResponse.data.symbol || coinIdLower.toUpperCase();
         }
       } catch (error) {
-        console.error(`Failed to fetch current price for ${newCoin.symbol}:`, error);
+        console.error(`Failed to fetch current price for ${coinIdLower}:`, error);
         // Use buy price as fallback
       }
 
       const coinToAdd = {
         id: Date.now(),
-        symbol: newCoin.symbol.toUpperCase(),
+        coinId: coinIdLower,
+        name: coinName,
+        symbol: coinSymbol.toUpperCase(),
         amount: parseFloat(newCoin.amount),
         buyPrice: parseFloat(newCoin.buyPrice),
         timestamp: new Date().toISOString()
@@ -131,12 +138,12 @@ const Portfolio = () => {
       
       // Update coin data cache with current price
       const newCoinDataCache = { ...coinData };
-      newCoinDataCache[coinSymbolLower] = currentPrice;
+      newCoinDataCache[coinIdLower] = currentPrice;
       setCoinData(newCoinDataCache);
       
       localStorage.setItem(`portfolio_${user?.id}`, JSON.stringify(updatedPortfolio));
       
-      setNewCoin({ symbol: '', amount: '', buyPrice: '' });
+      setNewCoin({ coinId: '', amount: '', buyPrice: '' });
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to add coin to portfolio:', error);
@@ -150,7 +157,7 @@ const Portfolio = () => {
       if (coinToRemove) {
         // Try to remove from backend, but don't fail if it doesn't exist
         try {
-          await PortfolioService.removeHolding(coinToRemove.symbol.toLowerCase());
+          await PortfolioService.removeHolding(coinToRemove.coinId);
         } catch (backendError) {
           // If it's a 404 (holding not found), it's likely an old holding stored locally
           // Still remove it from local state and storage
@@ -219,12 +226,12 @@ const Portfolio = () => {
           <form onSubmit={handleAddCoin} className="add-form">
             <h3>Add New Coin</h3>
             <div className="form-group">
-              <label>Symbol (e.g., BTC, ETH)</label>
+              <label>Coin ID (e.g., bitcoin, ethereum)</label>
               <input
                 type="text"
-                value={newCoin.symbol}
-                onChange={(e) => setNewCoin({...newCoin, symbol: e.target.value})}
-                placeholder="BTC"
+                value={newCoin.coinId}
+                onChange={(e) => setNewCoin({...newCoin, coinId: e.target.value})}
+                placeholder="bitcoin"
               />
             </div>
             <div className="form-group">
@@ -272,7 +279,7 @@ const Portfolio = () => {
             </thead>
             <tbody>
               {portfolio.map((coin) => {
-                const currentPrice = coinData[coin.symbol.toLowerCase()] || coin.buyPrice;
+                const currentPrice = coinData[coin.coinId] || coin.buyPrice;
                 const { profit, profitPercent } = calculateProfit(coin, currentPrice);
                 return (
                   <tr key={coin.id}>
