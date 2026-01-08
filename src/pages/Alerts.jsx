@@ -75,7 +75,7 @@ const Alerts = () => {
     // Set up interval to refresh prices every 30 seconds
     const priceRefreshInterval = setInterval(() => {
       fetchCoinPrices(alerts);
-    }, 30000); // 30 seconds
+    }, 60000); // 1 minute
 
     // Clean up interval on unmount or when alerts change
     return () => clearInterval(priceRefreshInterval);

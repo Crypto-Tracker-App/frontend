@@ -38,12 +38,12 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
 
 export const CoinService = {
   // Get top coins by market cap rank
-  // limit: Number of coins to return (default: 10, max: 100)
+  // limit: Number of coins to return (default: 10, max: 8000)
   // offset: Number of coins to skip for pagination (default: 0)
   getTopCoins: async (limit = 10, offset = 0) => {
     try {
       const params = new URLSearchParams({
-        limit: Math.min(limit, 100), // Cap at 100
+        limit: Math.min(limit, 8000), // Cap at 8000
         offset,
       });
       const response = await makeRequest(`/api/top-coins?${params}`, 'GET');

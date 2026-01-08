@@ -74,7 +74,7 @@ const Portfolio = () => {
     // Set up interval to refresh prices every 30 seconds
     const priceRefreshInterval = setInterval(() => {
       fetchCoinPrices(portfolio);
-    }, 30000); // 30 seconds
+    }, 60000); // 1 minute
 
     // Clean up interval on unmount or when portfolio changes
     return () => clearInterval(priceRefreshInterval);
