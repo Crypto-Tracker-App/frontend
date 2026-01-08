@@ -8,25 +8,23 @@ const Home = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [coins, setCoins] = useState([]);
-  const [displayedCoins, setDisplayedCoins] = useState([]);
+  const [filteredCoins, setFilteredCoins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(0);
-  const coinsPerPage = 100;
 
   useEffect(() => {
     const fetchCoins = async () => {
       setLoading(true);
       try {
-        // Fetch all coins
         const response = await CoinService.getTopCoins(8000, 0);
         if (response.status === 'success' && response.data) {
           setCoins(response.data);
-          setCurrentPage(0);
+          setFilteredCoins(response.data);
         }
       } catch (error) {
         console.error('Failed to fetch coins:', error);
         setCoins([]);
+        setFilteredCoins([]);
       } finally {
         setLoading(false);
       }
@@ -36,25 +34,12 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    // Filter coins based on search query
-    let filtered = coins;
-    if (searchQuery.trim()) {
-      filtered = coins.filter((coin) =>
-        coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // If search results exist, show all on one page, otherwise paginate
-    if (searchQuery.trim()) {
-      setDisplayedCoins(filtered);
-      setCurrentPage(0);
-    } else {
-      const startIndex = currentPage * coinsPerPage;
-      const endIndex = startIndex + coinsPerPage;
-      setDisplayedCoins(filtered.slice(startIndex, endIndex));
-    }
-  }, [searchQuery, coins, currentPage]);
+    const filtered = coins.filter((coin) =>
+      coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredCoins(filtered);
+  }, [searchQuery, coins]);
 
   const handlePortfolioClick = () => {
     navigate('/portfolio');
@@ -71,23 +56,6 @@ const Home = () => {
   const handleLogout = () => {
     logout();
   };
-
-  const handleNextPage = () => {
-    const maxPage = Math.ceil(coins.length / coinsPerPage) - 1;
-    if (currentPage < maxPage) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const totalPages = Math.ceil(coins.length / coinsPerPage);
-  const isSearching = searchQuery.trim() !== '';
-  const displayCount = isSearching ? displayedCoins.length : coins.length;
 
   return (
     <div className="home-container">
@@ -141,79 +109,32 @@ const Home = () => {
         {loading ? (
           <div className="loading">Loading coins...</div>
         ) : (
-          <>
-            <div className="coins-list">
-              <table className="coins-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Coin</th>
-                    <th>Symbol</th>
-                    <th>Price</th>
-                    <th>24h Change</th>
+          <div className="coins-list">
+            <table className="coins-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Coin</th>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                  <th>24h Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCoins.map((coin, index) => (
+                  <tr key={coin.id || index}>
+                    <td>{index + 1}</td>
+                    <td className="coin-name">{coin.name}</td>
+                    <td className="coin-symbol">{coin.symbol}</td>
+                    <td className="coin-price">€{typeof coin.current_price === 'number' ? coin.current_price.toLocaleString() : coin.price?.toLocaleString() || 'N/A'}</td>
+                    <td className={coin.price_change_percentage_24h >= 0 ? 'change-positive' : 'change-negative'}>
+                      {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h?.toFixed(2) || 'N/A'}% ({coin.price_change_24h >= 0 ? '+' : ''}€{coin.price_change_24h?.toFixed(2) || 'N/A'})
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {displayedCoins.map((coin, index) => (
-                    <tr key={coin.id || index}>
-                      <td>
-                        {isSearching
-                          ? index + 1
-                          : currentPage * coinsPerPage + index + 1}
-                      </td>
-                      <td className="coin-name">{coin.name}</td>
-                      <td className="coin-symbol">{coin.symbol}</td>
-                      <td className="coin-price">
-                        €{typeof coin.current_price === 'number'
-                          ? coin.current_price.toLocaleString()
-                          : coin.price?.toLocaleString() || 'N/A'}
-                      </td>
-                      <td
-                        className={
-                          coin.price_change_percentage_24h >= 0
-                            ? 'change-positive'
-                            : 'change-negative'
-                        }
-                      >
-                        {coin.price_change_percentage_24h >= 0 ? '+' : ''}
-                        {coin.price_change_percentage_24h?.toFixed(2) || 'N/A'}% (
-                        {coin.price_change_24h >= 0 ? '+' : ''}€
-                        {coin.price_change_24h?.toFixed(2) || 'N/A'})
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {!isSearching && (
-              <div className="pagination-controls">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 0}
-                  className="pagination-button"
-                >
-                  ← Previous
-                </button>
-                <span className="pagination-info">
-                  Page {currentPage + 1} of {totalPages} (Total: {coins.length} coins)
-                </span>
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage >= totalPages - 1}
-                  className="pagination-button"
-                >
-                  Next →
-                </button>
-              </div>
-            )}
-
-            {isSearching && (
-              <div className="search-results-info">
-                <p>Found {displayedCoins.length} coin(s) matching your search</p>
-              </div>
-            )}
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </div>
