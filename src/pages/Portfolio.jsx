@@ -148,8 +148,14 @@ const Portfolio = () => {
     try {
       const coinToRemove = portfolio.find(coin => coin.id === id);
       if (coinToRemove) {
-        // Remove from backend
-        await PortfolioService.removeHolding(coinToRemove.symbol.toLowerCase());
+        // Try to remove from backend, but don't fail if it doesn't exist
+        try {
+          await PortfolioService.removeHolding(coinToRemove.symbol.toLowerCase());
+        } catch (backendError) {
+          // If it's a 404 (holding not found), it's likely an old holding stored locally
+          // Still remove it from local state and storage
+          console.warn(`Holding "${coinToRemove.symbol}" not found in backend, removing from local storage:`, backendError);
+        }
         
         // Update local state
         const updatedPortfolio = portfolio.filter(coin => coin.id !== id);
