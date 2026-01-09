@@ -239,30 +239,13 @@
 }
 
 .change-positive {
-  background-color: #d1f7dc;
-  color: #047857;
+  color: #10b981;
   font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
 }
 
 .change-negative {
-  background-color: #fed7d7;
-  color: #991b1b;
+  color: #ef4444;
   font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.change-neutral {
-  background-color: #e5e7eb;
-  color: #4b5563;
-  font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-align: center;
 }
 
 .price-indicator {
