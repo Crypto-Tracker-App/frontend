@@ -126,7 +126,7 @@ const Home = () => {
                     <td className="coin-name">{coin.name}</td>
                     <td className="coin-symbol">{coin.symbol}</td>
                     <td className="coin-price">€{typeof coin.current_price === 'number' ? coin.current_price.toLocaleString() : coin.price?.toLocaleString() || 'N/A'}</td>
-                    <td>
+                    <td className="coin-price">
                       {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h?.toFixed(2) || 'N/A'}% ({coin.price_change_24h >= 0 ? '+' : '-'}€{Math.abs(coin.price_change_24h)?.toFixed(2) || 'N/A'})
                     </td>
                   </tr>
