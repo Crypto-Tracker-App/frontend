@@ -42,11 +42,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const result = await AuthService.login(username, password);
-      console.log('AuthContext - Login result:', { hasToken: !!result.token, hasUser: !!result.user });
       if (result.token && result.user) {
         localStorage.setItem('authToken', result.token);
         localStorage.setItem('user', JSON.stringify(result.user));
-        console.log('AuthContext - Token stored, first 30 chars:', result.token.substring(0, 30));
         setHasToken(true);
         setUser(result.user);
         return { success: true };
@@ -80,8 +78,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await AuthService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
+      // Ignore logout errors, still clear local state
     } finally {
       setUser(null);
       setHasToken(false);

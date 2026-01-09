@@ -101,7 +101,7 @@ const Portfolio = () => {
       const coinIdLower = newCoin.coinId.toLowerCase();
       
       // Add holding to backend
-      const portfolioResponse = await PortfolioService.addHolding(
+      await PortfolioService.addHolding(
         coinIdLower,
         parseFloat(newCoin.amount)
       );
