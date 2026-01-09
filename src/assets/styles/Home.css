@@ -248,6 +248,11 @@
   font-weight: 600;
 }
 
+.change-neutral {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
 .price-indicator {
   display: inline-flex;
   align-items: center;
