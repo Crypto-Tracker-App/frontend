@@ -5,7 +5,7 @@ import CoinService from '../services/coinService';
 import '../assets/styles/Home.css';
 
 const Home = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [coins, setCoins] = useState([]);
   const [filteredCoins, setFilteredCoins] = useState([]);

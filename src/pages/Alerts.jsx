@@ -137,10 +137,6 @@ const Alerts = () => {
   };
 
   const handleDeleteAlert = async (alertId) => {
-    if (!window.confirm('Are you sure you want to delete this alert?')) {
-      return;
-    }
-
     try {
       setError(null);
       await AlertService.deleteAlert(alertId);
