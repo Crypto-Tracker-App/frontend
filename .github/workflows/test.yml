@@ -25,15 +25,13 @@ jobs:
 
     - name: Install dependencies
       run: npm install --legacy-peer-deps
-      working-directory: frontend
 
     - name: Run tests
       run: npm run test:ci
-      working-directory: frontend
 
     - name: Upload coverage reports
       if: always()
       uses: codecov/codecov-action@v3
       with:
-        files: frontend/coverage/coverage-final.json
+        files: coverage/coverage-final.json
         fail_ci_if_error: false
