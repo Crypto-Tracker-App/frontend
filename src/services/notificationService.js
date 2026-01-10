@@ -1,5 +1,6 @@
+import { VAPID_PUBLIC_KEY } from '../config';
+
 // Service for managing push notifications in the browser
-const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || 'your_public_key_here';
 
 export class NotificationService {
   static async requestPermission() {

@@ -1,5 +1,6 @@
+import { USER_SERVICE_URL } from '../config';
 
-const API_BASE_URL = 'http://20.251.246.218/user-service';
+const API_BASE_URL = USER_SERVICE_URL;
 
 // Helper function to make authenticated requests
 const makeRequest = async (endpoint, method = 'GET', data = null) => {

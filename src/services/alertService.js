@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://20.251.246.218/alert-service';
+import { ALERT_SERVICE_URL } from '../config';
+
+const API_BASE_URL = ALERT_SERVICE_URL;
 
 // Helper function to make requests to alert service
 const makeRequest = async (endpoint, method = 'GET', data = null) => {

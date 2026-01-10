@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://20.251.246.218/portfolio-service';
+import { PORTFOLIO_SERVICE_URL } from '../config';
+
+const API_BASE_URL = PORTFOLIO_SERVICE_URL;
 
 // Helper function to make requests to portfolio service
 const makeRequest = async (endpoint, method = 'GET', data = null) => {
