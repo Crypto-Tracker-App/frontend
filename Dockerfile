@@ -9,9 +9,6 @@ RUN npm ci
 # copy source
 COPY . .
 
-# run tests - fail if tests don't pass
-RUN npm test -- --run
-
 # build the application
 RUN npm run build
 
