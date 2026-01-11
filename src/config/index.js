@@ -11,7 +11,6 @@ const getConfig = () => {
   console.warn('Runtime config not found, using defaults');
   return {
     API_BASE_URL: 'http://localhost',
-    VAPID_PUBLIC_KEY: 'your_public_key_here',
   };
 };
 
@@ -19,7 +18,6 @@ const config = getConfig();
 
 // Export individual config values for easy access
 export const API_BASE_URL = config.API_BASE_URL;
-export const VAPID_PUBLIC_KEY = config.VAPID_PUBLIC_KEY;
 
 // Service-specific URLs
 export const USER_SERVICE_URL = `${API_BASE_URL}/user-service`;

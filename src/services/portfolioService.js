@@ -17,7 +17,6 @@ const makeRequest = async (endpoint, method = 'GET', data = null) => {
 
   // Add JWT token from localStorage if available
   const token = localStorage.getItem('authToken');
-  console.log('PortfolioService - Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN FOUND');
   if (token) {
     options.headers['Authorization'] = `Bearer ${token}`;
   } else {
